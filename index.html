@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>批量修改银联商户经营名称 + 法定名称 原型页面</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background:#f0f2f5; color:#333; font-size:13px; }
+
+  /* ============ 说明条 ============ */
+  .proto-bar { background:#fffbe6; border-bottom:1px solid #ffe58f; padding:10px 16px; position:sticky; top:0; z-index:100; }
+  .proto-title { font-size:15px; font-weight:600; color:#614700; margin-bottom:8px; }
+  .proto-ver { font-size:12px; font-weight:400; color:#8c6d00; margin-left:12px; padding:2px 8px; border:1px solid #ffe58f; border-radius:4px; vertical-align:1px; }
+  .nav-groups { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:10px; align-items:stretch; }
+  .nav-group { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 10px 8px 8px; border-radius:6px; }
+  .nav-group.g-new { background:#fff1f0; border:1px solid #ffccc7; }
+  .nav-group.g-chg { background:#fff7e6; border:1px solid #ffe7ba; }
+  .group-label { font-size:12px; font-weight:600; padding:4px 11px; border-radius:12px; color:#fff; white-space:nowrap; margin-right:2px; }
+  .g-new .group-label { background:#f5222d; }
+  .g-chg .group-label { background:#fa8c16; }
+  .nav-groups button { padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; background:#fff; transition:all .15s; }
+  .nav-groups button.b-new { border:1px solid #ffa39e; color:#cf1322; }
+  .nav-groups button.b-new:hover { background:#fff1f0; }
+  .nav-groups button.b-new.active { background:#f5222d; border-color:#f5222d; color:#fff; font-weight:600; box-shadow:0 2px 6px rgba(245,34,45,.3); }
+  .nav-groups button.b-chg { border:1px solid #ffd591; color:#d46b08; }
+  .nav-groups button.b-chg:hover { background:#fff7e6; }
+  .nav-groups button.b-chg.active { background:#fa8c16; border-color:#fa8c16; color:#fff; font-weight:600; box-shadow:0 2px 6px rgba(250,140,22,.3); }
+  .legend { display:flex; flex-wrap:wrap; gap:16px; font-size:12px; color:#614700; align-items:center; }
+  .legend i { display:inline-block; width:12px; height:12px; border-radius:2px; margin-right:4px; vertical-align:-2px; }
+
+  /* ============ 后台外壳 ============ */
+  .app { background:#fff; }
+  .topbar { height:48px; background:#fff; border-bottom:1px solid #e8e8e8; display:flex; align-items:center; padding:0 16px; color:#333; font-size:13px; }
+  .topbar .logo { font-weight:600; margin-right:32px; display:flex; align-items:center; gap:6px; color:#1a1a1a; }
+  .topbar .logo .mark { color:#1890ff; font-size:16px; }
+  .topbar nav { display:flex; gap:26px; flex:1; height:48px; align-items:center; }
+  .topbar nav span { color:#555; cursor:pointer; height:48px; line-height:48px; }
+  .topbar nav span.on { color:#1890ff; border-bottom:2px solid #1890ff; }
+  .topbar .user { color:#888; font-size:12px; }
+
+  .body { display:flex; min-height:640px; }
+  .side { width:170px; border-right:1px solid #f0f0f0; background:#fff; padding-top:8px; flex:none; }
+  .side .grp { padding:10px 14px; color:#333; display:flex; justify-content:space-between; cursor:pointer; }
+  .side .grp.open { color:#1890ff; }
+  .side .item { padding:9px 14px 9px 28px; color:#555; cursor:pointer; }
+  .side .item.on { background:#e6f7ff; color:#1890ff; border-right:2px solid #1890ff; }
+
+  .main { flex:1; padding:0 12px 24px; min-width:0; }
+  .tabs { display:flex; align-items:center; gap:2px; border-bottom:1px solid #f0f0f0; height:38px; font-size:12px; }
+  .tabs .t { padding:6px 12px; color:#555; }
+  .tabs .t.on { color:#1890ff; border-bottom:2px solid #1890ff; }
+  .tabs .right { margin-left:auto; color:#555; }
+
+  .card { background:#fff; border:1px solid #f0f0f0; margin-top:12px; padding:14px; }
+  .filters { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .inp { border:1px solid #d9d9d9; border-radius:3px; height:30px; line-height:28px; padding:0 10px; color:#999; background:#fff; min-width:170px; font-size:12px; }
+  .inp.sel::after { content:"▾"; float:right; color:#bbb; }
+  .btn { height:30px; padding:0 16px; border-radius:3px; border:1px solid #d9d9d9; background:#fff; cursor:pointer; font-size:12px; line-height:28px; display:inline-block; }
+  .btn.primary { background:#1890ff; border-color:#1890ff; color:#fff; }
+  .ops { margin:12px 0; display:flex; gap:8px; }
+
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { border:1px solid #e8e8e8; padding:8px 10px; text-align:left; white-space:nowrap; }
+  th { background:#fafafa; font-weight:600; color:#333; }
+  td { color:#555; }
+  .tbl-wrap { overflow-x:auto; padding-bottom:130px; margin-bottom:-130px; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:2px; color:#fff; font-size:11px; }
+  .tag.ok { background:#52c41a; }
+  .tag.fail { background:#f5222d; }
+  .tag.ing { background:#faad14; }
+  .pager { margin-top:12px; text-align:right; color:#666; font-size:12px; }
+
+  /* ============ 标注：仅用于「现有页面」的改动 ============ */
+  .new { color:#f5222d !important; }
+  th.new, td.new { background:#fff1f0; color:#f5222d; }
+  th.chg, td.chg { background:#fff7e6; color:#d46b08; }
+  .chg { color:#d46b08 !important; }
+  .badge { display:inline-block; font-size:10px; padding:0 5px; border-radius:2px; margin-left:4px; vertical-align:1px; }
+  .badge.k { background:#d9d9d9; color:#555; }
+  .note { margin-top:10px; padding:10px 12px; background:#f6ffed; border:1px solid #b7eb8f; font-size:12px; color:#237804; line-height:1.8; }
+  .note.warn { background:#fff1f0; border-color:#ffa39e; color:#a8071a; }
+  .note.tip { background:#e6f7ff; border-color:#91d5ff; color:#0050b3; }
+  .note b { color:inherit; }
+
+  /* ============ 问号 tooltip ============ */
+  .q { display:inline-block; width:14px; height:14px; line-height:13px; text-align:center; border:1px solid #b5b5b5;
+       border-radius:50%; color:#888; font-size:10px; cursor:help; position:relative; margin-left:4px; font-weight:400; background:#fff; }
+  .q:hover { border-color:#1890ff; color:#1890ff; }
+  .q:hover::after { content:attr(data-tip); position:absolute; top:19px; left:-10px; width:310px; background:#2b2b2b; color:#fff;
+       padding:8px 10px; border-radius:3px; font-size:11px; line-height:1.7; white-space:normal; z-index:60;
+       box-shadow:0 2px 10px rgba(0,0,0,.25); text-align:left; }
+  .q:hover::before { content:""; position:absolute; top:14px; left:3px; border:5px solid transparent; border-bottom-color:#2b2b2b; z-index:61; }
+  .q.r:hover::after { left:auto; right:-10px; }
+  .q.r:hover::before { left:auto; right:3px; }
+
+  /* ============ 抽屉弹窗 ============ */
+  .drawer-demo { display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; }
+  .drawer { width:430px; border:1px solid #e8e8e8; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.08); flex:none; }
+  .drawer h4 { margin:0; padding:12px 16px; border-bottom:1px solid #f0f0f0; font-size:14px; background:#fafafa; }
+  .drawer .fm { padding:16px; }
+  .row { display:flex; margin-bottom:14px; align-items:flex-start; }
+  .row label { width:130px; text-align:right; padding-right:10px; color:#333; flex:none; line-height:30px; font-size:12px; }
+  .row .ctl { flex:1; min-width:0; }
+  .req { color:#f5222d; margin-right:2px; }
+  .radio { display:block; line-height:24px; font-size:12px; color:#333; }
+  .radio i { display:inline-block; width:12px; height:12px; border:1px solid #d9d9d9; border-radius:50%; margin-right:6px; vertical-align:-1px; }
+  .radio i.on { border:4px solid #1890ff; width:12px; height:12px; }
+  .ta { border:1px solid #d9d9d9; height:58px; width:100%; border-radius:3px; }
+  .drawer .foot { border-top:1px solid #f0f0f0; padding:10px 16px; text-align:right; }
+  .hint { color:#999; font-size:11px; line-height:1.7; margin-top:4px; }
+  .box-title { font-size:13px; font-weight:600; margin:0 0 8px; }
+
+  .wf-block { border:1px solid #e8e8e8; margin-top:12px; }
+  .wf-block .hd { background:#fafafa; padding:8px 12px; font-weight:600; border-bottom:1px solid #e8e8e8; }
+  .kv { width:100%; border-collapse:collapse; }
+  .kv th { width:135px; background:#fafafa; text-align:right; }
+  .kv td { background:#fff; }
+
+  .screen { display:none; }
+  .screen.on { display:block; }
+  h3.sec { font-size:14px; margin:20px 0 6px; }
+</style>
+</head>
+<body>
+
+<div class="proto-bar">
+  <div class="proto-title">批量修改银联商户经营名称 + 法定名称 原型页面<span class="proto-ver">v4　2026-09-09</span></div>
+  <div class="nav-groups">
+    <div class="nav-group g-new">
+      <span class="group-label">新增页面 2 个</span>
+      <button class="b-new active" data-s="s1">① 商户名称变更管理·列表</button>
+      <button class="b-new" data-s="s2">② 商户名称变更管理·新增弹窗</button>
+    </div>
+    <div class="nav-group g-chg">
+      <span class="group-label">现有页面改动 5 个</span>
+      <button class="b-chg" data-s="s3">③ 商户地区变更管理·列表</button>
+      <button class="b-chg" data-s="s4">④ 商户地区变更管理·新增弹窗</button>
+      <button class="b-chg" data-s="s5">⑤ 批量业务操作 + 两套模板</button>
+      <button class="b-chg" data-s="s6">⑥ 工作流记录·列表</button>
+      <button class="b-chg" data-s="s7">⑦ 工作流·审核详情</button>
+    </div>
+  </div>
+  <div class="legend">
+    <span><i style="background:#fff1f0;border:1px solid #ffa39e"></i>红 = 现有页面上<b>新增</b>的字段</span>
+    <span><i style="background:#fff7e6;border:1px solid #ffd591"></i>橙 = 现有页面上<b>调整</b>的字段</span>
+    <span><i style="background:#fff;border:1px solid #d9d9d9"></i>白 = 沿用现有</span>
+    <span>新增页面的整页都是新增，页内不再逐字段标色</span>
+    <span style="color:#0050b3">带 <span class="q" style="cursor:default">?</span> 的字段＝<b>实际页面要做问号提示</b>（给运营看，悬浮显示括号内说明）；其余字段的说明见需求文档的字段表</span>
+  </div>
+</div>
+
+<!-- ==================== 屏 1：商户名称变更管理·列表页（新增页） ==================== -->
+<div class="screen on" id="s1">
+<div class="app">
+  <div class="topbar">
+    <div class="logo"><span class="mark">◁</span> 嘉联支付 · 业务运营 ▾</div>
+    <nav><span>应收系统</span><span class="on">立刷中心</span><span>增值服务</span><span>进销存系统</span><span>客诉平台</span></nav>
+    <div class="user">欢迎登录！彭才林</div>
+  </div>
+  <div class="body">
+    <div class="side">
+      <div class="grp">立刷增值服务 <span>⌄</span></div>
+      <div class="grp open">商户名单管理 <span>⌃</span></div>
+      <div class="item">更新营业执照白名单</div>
+      <div class="item">商户批量报备管理</div>
+      <div class="item">信加灰度商户管理</div>
+      <div class="item">商户地区变更管理</div>
+      <div class="item on">商户名称变更管理</div>
+      <div class="item">支付宝商户大额管理</div>
+      <div class="item">结算卡更换名单管理</div>
+      <div class="item">用户确认记录</div>
+      <div class="item">电签绑定记录</div>
+      <div class="item">商户认证名单</div>
+      <div class="grp">立刷优享手续费 <span>⌄</span></div>
+      <div class="grp">立刷权益卡管理 <span>⌄</span></div>
+      <div class="grp">立刷产品管理 <span>⌄</span></div>
+    </div>
+    <div class="main">
+      <div class="tabs"><span class="t">首页</span><span class="t">商户地区变更…</span><span class="t on">商户名称变更管理 ✕</span><span class="right">关闭操作 ∨</span></div>
+
+      <div class="card">
+        <div class="box-title">路径：综合门户 → 业务运营 → 立刷中心 → 商户名单管理 → 商户名称变更管理（新增菜单）</div>
+        <div class="filters">
+          <span class="inp">创建开始时间 📅</span>
+          <span class="inp">创建结束时间 📅</span>
+          <span class="inp sel">变更类型</span>
+          <span class="inp sel">状态</span>
+          <span class="inp">子商户号</span>
+          <span class="inp">银联商户号</span>
+          <span class="btn primary">查询</span>
+          <span class="btn">重置</span>
+        </div>
+        <div class="ops"><span class="btn primary">新增</span><span class="btn">导出</span></div>
+
+        <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>子商户号</th>
+              <th>银联商户号</th>
+              <th>变更类型<span class="q" data-tip="列表只有两种取值：经营名称、法定名称。新增或导入时选“经营名称+法定名称”的，在这里按字段拆成 2 条记录分别展示，便于逐字段核对；两条共用同一次报备，只占用 1 次变更次数，状态与失败原因同步更新。">?</span></th>
+              <th>变更前名称</th>
+              <th>变更后名称</th>
+              <th>经营名称生成方式<span class="q" data-tip="指定名称：取导入模板或弹窗录入的名称。 去掉名称市级前缀：截掉名称开头的市级前缀，口径含 市/自治州/地区/阿拉善盟/兴安盟/锡林郭勒盟/省直辖县级行政区划，与已上线的门店名称校验口径一致。 变更类型=法定名称时固定为 按规则重算（不录入）。">?</span></th>
+              <th>状态<span class="q" data-tip="待审核：已提交，等待人工审核。 变更中：审核已通过、执行中，超时未收到银联应答也保持此状态由定时任务续查。 成功：银联修改报备同步成功，右端商户号不变。 失败：审核不通过、执行校验不通过，或银联明确返回失败（本地名称已回滚）。">?</span></th>
+              <th>失败原因</th>
+              
+              
+              <th>创建时间</th>
+              <th>更新时间</th>
+              <th>操作人</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:#f6ffed">
+              <td>N100000000000001</td><td>M100000000000001</td><td>经营名称</td><td>西宁市美食百货店</td><td>美食百货店</td><td>去掉名称市级前缀</td>
+              <td><span class="tag ok">成功</span></td><td>-</td><td>2026-09-10 14:08:19</td><td>2026-09-10 14:13:19</td><td>彭才林</td><td>组合提交，与下一行同批同步</td>
+            </tr>
+            <tr style="background:#f6ffed">
+              <td>N100000000000001</td><td>M100000000000001</td><td>法定名称</td><td>西宁市个体户张三</td><td>商户_张三</td><td>按规则重算（不录入）</td>
+              <td><span class="tag ok">成功</span></td><td>-</td><td>2026-09-10 14:08:19</td><td>2026-09-10 14:13:19</td><td>彭才林</td><td>组合提交，与上一行同批同步</td>
+            </tr>
+            <tr>
+              <td>N100000000000002</td><td>M100000000000002</td><td>经营名称</td><td>深圳市美美丽丽便利店</td><td>美美丽丽便利店</td><td>去掉名称市级前缀</td>
+              <td><span class="tag ok">成功</span></td><td>-</td><td>2026-09-10 14:08:19</td><td>2026-09-10 14:13:19</td><td>彭才林</td><td>名称带地区整改</td>
+            </tr>
+            <tr>
+              <td>N100000000000003</td><td>M100000000000003</td><td>经营名称</td><td>津市市张三的超市</td><td>张三的超市</td><td>去掉名称市级前缀</td>
+              <td><span class="tag ing">变更中</span></td><td>-</td><td>2026-09-10 14:08:19</td><td>2026-09-10 14:09:02</td><td>彭才林</td><td>批量导入</td>
+            </tr>
+            <tr>
+              <td>N100000000000004</td><td>M100000000000004</td><td>经营名称</td><td>中山市美食店</td><td>-</td><td>去掉名称市级前缀</td>
+              <td><span class="tag fail">失败</span></td><td>经营名称字数不足5个字</td><td>2026-09-10 13:53:58</td><td>2026-09-10 13:58:58</td><td>彭才林</td><td>批量导入</td>
+            </tr>
+            <tr>
+              <td>N100000000000005</td><td>M100000000000005</td><td>经营名称</td><td>城市银行茶饮店</td><td>天天茶饮甜品店</td><td>指定名称</td>
+              <td><span class="tag ok">成功</span></td><td>-</td><td>2026-09-09 18:46:15</td><td>2026-09-09 18:51:15</td><td>彭才林</td><td>敏感词整改</td>
+            </tr>
+            <tr>
+              <td>N100000000000006</td><td>M100000000000006</td><td>法定名称</td><td>兰州市个体户李四</td><td>-</td><td>按规则重算（不录入）</td>
+              <td><span class="tag fail">失败</span></td><td>31天内变更次数已达上限</td><td>2026-09-09 18:39:15</td><td>2026-09-09 18:39:20</td><td>彭才林</td><td>-</td>
+            </tr>
+            <tr>
+              <td>N100000000000007</td><td>M100000000000007</td><td>经营名称</td><td>南昌市顺顺百货店</td><td>-</td><td>去掉名称市级前缀</td>
+              <td><span class="tag fail">失败</span></td><td>该商户为挂靠左端（非报备左端），本期不支持</td><td>2026-09-09 15:24:51</td><td>2026-09-09 15:29:51</td><td>彭才林</td><td>-</td>
+            </tr>
+            <tr>
+              <td>N100000000000008</td><td>M100000000000008</td><td>经营名称</td><td>合肥市甜甜奶茶店</td><td>-</td><td>去掉名称市级前缀</td>
+              <td><span class="tag fail">失败</span></td><td>经营名称无需变更（当前名称不含市级前缀）</td><td>2026-09-09 15:24:51</td><td>2026-09-09 15:30:02</td><td>彭才林</td><td>执行时按当前名称重算</td>
+            </tr>
+            
+          </tbody>
+        </table>
+        </div>
+        <div class="pager">显示第 1 到第 10 条记录，总共 128,640 条记录　每页显示 20 ▾　‹ 1 2 3 4 5 … ›　跳转至 ▭ GO</div>
+
+        <div class="note">
+          <b>一、操作对象与执行顺序</b><br>
+          1、<b>录入的是左端子商户号</b>，不是银联商户号。执行顺序：<b>先改左端信息 → 再用改好的左端信息发起修改报备去更新右端</b>，右端商户号不变。这样左右端始终一致，后续任何一次重新报备也不会把旧名称推回去。<br>
+          2、<b>次数按银联商户号统计</b>（右端），不是按左端——"单商户 31 天 2 次 / 自然年 3 次"里的"商户"指的是银联商户号；31 天为滚动自然日，不是自然月。列表把对应的银联商户号带出来展示，方便核对次数落在谁身上。<br>
+          3、<b>只支持报备左端</b>：录入的左端必须是当初报出该右端的那个左端。挂靠左端（只路由、未报备）改本地名称不会同步到银联，提交时直接拦截，本期不支持。<br>
+          4、<b>组合类型在列表拆 2 条展示</b>（上表前两行绿底）：新增/导入选「经营名称+法定名称」时，执行仍是<b>一次报备</b>、只占 1 次变更次数、只生成 1 条执行流程，但列表按字段拆成 2 条记录，状态与失败原因同步更新。因此本列表的变更类型只有「经营名称」「法定名称」两种取值。<br>
+          5、本页<b>不提供批量操作</b>，失败记录<b>不提供"重新发起"</b>——执行由批量导入驱动，失败的重新导入即可。<br>
+          6、<b>导出</b>含法人姓名（法定名称=商户_张三），需单独授权并沿用报表下载的留痕能力。
+        </div>
+        <div class="note warn">
+          <b>二、执行阶段的 4 条规则（直接影响数据一致性）</b><br>
+          1、<b>校验放在审核通过之后</b>：提交与导入环节只做表单/文件格式校验，<b>业务校验（次数、适用范围、商户状态、名称）在人工审核通过后逐户执行时做</b>；目标名称按执行时点的当前名称实时计算，不使用提交时的快照。校验不通过的单独置失败，不影响名单内其它商户。<br>
+          2、<b>失败才回滚，超时不回滚</b>：银联<b>明确返回失败</b>时，把左端名称改回本记录"变更前名称"的值（组合类型两个字段一并改回），记录置失败；<b>超时或无应答保持"变更中"不回滚</b>，由定时任务续查最终结果——直接判失败并回滚会造成"银联已改、本地已回滚"的左右端不一致。若改回名称的操作本身也失败，失败原因追加"左端名称回滚失败，需人工核对"并输出告警。报备失败与回滚都<b>不占用变更次数</b>。<br>
+          3、<b>右端取数规则</b>：<b>按该左端最新的报备关系取右端</b>。地区变更后原右端<b>次日晚上才注销</b>，窗口期内同一左端会同时挂着待注销的旧右端与新右端，按最新报备关系取才不会改到待注销的那个。<br>　　4、<b>并发控制</b>：同一左端同时被其它变更流程占用时，复用现有的<b>商户级操作锁</b>拦截，提示沿用「该商户正在操作中，请稍后重试」；<b>不做跨模块的业务互斥判断</b>（不去查地区变更那张表）。
+        </div>
+        </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== 屏 2：新增弹窗（新增页） ==================== -->
+<div class="screen" id="s2">
+<div class="app">
+  <div class="topbar">
+    <div class="logo"><span class="mark">◁</span> 嘉联支付 · 业务运营 ▾</div>
+    <nav><span>应收系统</span><span class="on">立刷中心</span><span>增值服务</span><span>进销存系统</span><span>客诉平台</span></nav>
+    <div class="user">欢迎登录！彭才林</div>
+  </div>
+  <div class="body">
+    <div class="side">
+      <div class="grp open">商户名单管理 <span>⌃</span></div>
+      <div class="item">商户地区变更管理</div>
+      <div class="item on">商户名称变更管理</div>
+    </div>
+    <div class="main">
+      <div class="tabs"><span class="t">首页</span><span class="t on">商户名称变更管理 ✕</span><span class="right">关闭操作 ∨</span></div>
+
+      <div class="card">
+        <div class="box-title">点击【新增】后的右侧抽屉。下方三种形态是同一个弹窗按「变更类型」联动后的三种状态。</div>
+        <div class="drawer-demo">
+
+          <!-- 形态 A：经营名称 -->
+          <div class="drawer">
+            <h4>形态 A：变更类型 = 经营名称</h4>
+            <div class="fm">
+              <div class="row"><label><span class="req">*</span>子商户号</label><div class="ctl">
+                <div class="inp" style="width:100%">请输入子商户号</div>
+                <div class="hint">左端电签子商户号，单次一个。必须是报备出右端的那个左端，挂靠左端提交时会被拦截</div>
+              </div></div>
+
+              <div class="row"><label>当前信息</label><div class="ctl">
+                <div class="inp" style="width:100%; background:#f5f5f5; height:auto; line-height:1.8; padding:6px 10px; color:#555">
+                  银联商户号：M100000000000002<br>
+                  经营名称：深圳市美美丽丽便利店<br>
+                  法定名称：商户_王美美
+                </div>
+                <div class="hint">子商户号失焦后<b>自动带出</b>对应银联商户号与两个当前名称，运营不用另开页面查；带不出（商户不存在 / 已注销 / 无右端）即时报错</div>
+              </div></div>
+
+              <div class="row"><label><span class="req">*</span>变更类型</label><div class="ctl">
+                <div class="inp sel" style="width:100%">经营名称</div>
+                <div class="hint">经营名称 / 法定名称 / 经营名称+法定名称，单选必填。两个名称都要改时<b>选组合类型</b>，一次报备改完，只占 1 次次数</div>
+              </div></div>
+
+              <div class="row"><label><span class="req">*</span>经营名称生成方式</label><div class="ctl">
+                <span class="radio"><i class="on"></i>去掉名称市级前缀</span>
+                <span class="radio"><i></i>指定名称</span>
+                <div class="hint">默认选中"去掉名称市级前缀"：截掉名称开头的市级前缀，市 / 自治州 / 地区 / 阿拉善盟 / 兴安盟 / 锡林郭勒盟 / 省直辖县级行政区划 同口径；名称本身不带市级前缀的，视为无需变更并拦截提交</div>
+              </div></div>
+
+              <div class="row"><label>指定经营名称</label><div class="ctl">
+                <div class="inp" style="width:100%">仅"指定名称"时必填</div>
+                <div class="hint">失焦即校验：① 字数 ≥5 ② 不含"市 / 省 / 区"等地区关键词 ③ 不含关键字库违规词（公司、银行、医院、金融…）④ 与当前名称相同则拦截</div>
+              </div></div>
+
+              <div class="row"><label>备注</label><div class="ctl">
+                <textarea class="ta"></textarea>
+                <div class="hint">选填，建议写整改批次，会展示在列表和工作流审核详情里</div>
+              </div></div>
+
+              <div class="note" style="margin:0 0 8px">名称预览（提交前展示，便于核对）：深圳市美美丽丽便利店 → <b>美美丽丽便利店</b></div>
+            </div>
+            <div class="foot"><span class="btn">取消</span> <span class="btn primary">确认</span></div>
+          </div>
+
+          <!-- 形态 B：法定名称 -->
+          <div class="drawer">
+            <h4>形态 B：变更类型 = 法定名称</h4>
+            <div class="fm">
+              <div class="row"><label><span class="req">*</span>子商户号</label><div class="ctl">
+                <div class="inp" style="width:100%">请输入子商户号</div>
+              </div></div>
+
+              <div class="row"><label>当前信息</label><div class="ctl">
+                <div class="inp" style="width:100%; background:#f5f5f5; height:auto; line-height:1.8; padding:6px 10px; color:#555">
+                  银联商户号：M100000000000001<br>
+                  经营名称：美食百货店<br>
+                  法定名称：西宁市个体户张三
+                </div>
+                <div class="hint">同形态 A：自动带出</div>
+              </div></div>
+
+              <div class="row"><label><span class="req">*</span>变更类型</label><div class="ctl">
+                <div class="inp sel" style="width:100%">法定名称</div>
+                <div class="hint">法定名称由系统在执行时按规则重算，弹窗不展示目标名称、也不支持录入</div>
+              </div></div>
+
+              <div class="row"><label>备注</label><div class="ctl">
+                <textarea class="ta"></textarea>
+              </div></div>
+
+              <div class="note" style="margin:0 0 8px">法定名称<b>不做提交前预览</b>——目标名称依赖执行时调用的外部服务，弹窗阶段取不到</div>
+            </div>
+            <div class="foot"><span class="btn">取消</span> <span class="btn primary">确认</span></div>
+          </div>
+
+          <!-- 形态 C：组合 -->
+          <div class="drawer">
+            <h4>形态 C：变更类型 = 经营名称+法定名称</h4>
+            <div class="fm">
+              <div class="row"><label><span class="req">*</span>子商户号</label><div class="ctl">
+                <div class="inp" style="width:100%">请输入子商户号</div>
+              </div></div>
+
+              <div class="row"><label>当前信息</label><div class="ctl">
+                <div class="inp" style="width:100%; background:#f5f5f5; height:auto; line-height:1.8; padding:6px 10px; color:#555">
+                  银联商户号：M100000000000001<br>
+                  经营名称：西宁市美食百货店<br>
+                  法定名称：西宁市个体户张三
+                </div>
+                <div class="hint">两个名称都带地区前缀的商户走这个类型</div>
+              </div></div>
+
+              <div class="row"><label><span class="req">*</span>变更类型</label><div class="ctl">
+                <div class="inp sel" style="width:100%">经营名称+法定名称</div>
+              </div></div>
+
+              <div class="row"><label><span class="req">*</span>经营名称生成方式</label><div class="ctl">
+                <span class="radio"><i class="on"></i>去掉名称市级前缀</span>
+                <span class="radio"><i></i>指定名称</span>
+                <div class="hint">与形态 A 完全一致；法定名称部分固定按规则重算、不录入</div>
+              </div></div>
+
+              <div class="row"><label>备注</label><div class="ctl"><textarea class="ta"></textarea></div></div>
+
+              <div class="note" style="margin:0 0 8px">
+                名称预览：<br>
+                经营：西宁市美食百货店 → <b>美食百货店</b><br>
+                法定：<b>不做提交前预览</b>（执行时按规则重算）<br>
+                两个字段<b>一次报备同步</b>，只占 1 次变更次数、只生成 1 条执行流程；<b>列表按字段拆成 2 条记录展示</b>
+              </div>
+            </div>
+            <div class="foot"><span class="btn">取消</span> <span class="btn primary">确认</span></div>
+          </div>
+        </div>
+
+        <div class="note warn">
+          <b>校验分两层：提交时只校验格式，业务校验在人工审核通过后逐户做</b><br>
+          <b>① 提交 / 导入时（表单与文件格式）</b>：必填项、指定经营名称的字数≥5、不含"市/省/区"等地区关键词、不含关键字库违规词。不通过则就地提示，不生成记录。<br>
+          <b>② 人工审核通过后，逐户执行校验</b>（不通过的该户置失败，不发起报备、不占用次数，不影响名单内其它商户）：<br>
+          　　1、<b>次数校验</b>：该左端对应的<b>银联商户号</b>在<b>滚动 31 个自然日</b>内同步成功 ≥2 次、或自然年内 ≥3 次 → 失败原因"31天内变更次数已达上限"。31 天按滚动自然日算，不是自然月；天数与次数阈值后台可配。<br>
+          　　2、<b>适用范围校验</b>：录入的左端不是报备左端（挂靠左端）→ 本期不支持；电签升级营业执照商户 → 本期不支持；左端已注销 / 查不到对应右端 / 已有另一条变更中的记录 → 各记对应失败原因。<br>
+          　　3、<b>名称校验</b>：按执行时点当前名称重算，去市级前缀后不足 5 个字 → "经营名称字数不足5个字"；当前名称本就不含市级前缀 → "经营名称无需变更（当前名称不含市级前缀）"。<br>
+          <b>③ 审核环节</b>：提交后进入人工审核（商户名称变更审核流程）——单条新增 1 条、<b>每次批量导入只 1 条</b>，不按户拆。审核通过后名单内各户自动生成执行流程并<b>自动通过</b>，无需逐户审核；审核不通过则本批记录全部置失败。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== 屏 3：地区变更列表（现有页改动） ==================== -->
+<div class="screen" id="s3">
+<div class="app">
+  <div class="topbar">
+    <div class="logo"><span class="mark">◁</span> 嘉联支付 · 业务运营 ▾</div>
+    <nav><span>应收系统</span><span class="on">立刷中心</span><span>增值服务</span><span>进销存系统</span><span>客诉平台</span></nav>
+    <div class="user">欢迎登录！彭才林</div>
+  </div>
+  <div class="body">
+    <div class="side">
+      <div class="grp open">商户名单管理 <span>⌃</span></div>
+      <div class="item on">商户地区变更管理</div>
+      <div class="item">商户名称变更管理</div>
+    </div>
+    <div class="main">
+      <div class="tabs"><span class="t">首页</span><span class="t on">商户地区变更管理 ✕</span><span class="right">关闭操作 ∨</span></div>
+      <div class="card">
+        <div class="filters">
+          <span class="inp">创建开始时间 📅</span><span class="inp">创建结束时间 📅</span><span class="inp sel">状态</span><span class="inp">子商户号</span>
+          <span class="btn primary">查询</span><span class="btn">重置</span>
+        </div>
+        <div class="ops"><span class="btn primary">新增</span><span class="btn">导出</span></div>
+        <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>子商户号</th><th>地区码</th><th>状态</th><th>失败原因</th><th>变更后地区码</th><th>变更后经度</th><th>变更后纬度</th>
+            <th class="new">法定名称处理方式<span class="q" data-tip="本次唯一新增列。取值：不调整（默认）/ 按迁入地重算。是弹窗与导入模板新增字段的回显，运营执行后据此核对这批到底动没动法定名称。">?</span></th>
+            <th>创建时间</th><th>更新时间</th><th>备注</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>N100000000000005</td><td>630104</td><td><span class="tag ok">成功</span></td><td>-</td><td>630104</td><td>101.807976</td><td>36.615593</td><td class="new">不调整</td><td>2026-08-24 18:46:15</td><td>2026-08-24 18:51:15</td><td>新疆地区迁移青海</td></tr>
+            <tr><td>N100000000000006</td><td>440100</td><td><span class="tag ok">成功</span></td><td>-</td><td>440114</td><td>113.226436</td><td>23.405478</td><td class="new">不调整</td><td>2026-08-24 14:08:19</td><td>2026-08-24 14:13:19</td><td>厦门地区迁移广州</td></tr>
+            <tr><td>N100000000000004</td><td>440100</td><td><span class="tag ok">成功</span></td><td>-</td><td>440113</td><td>113.320287</td><td>23.034263</td><td class="new">按迁入地重算</td><td>2026-08-24 14:08:19</td><td>2026-08-24 14:13:19</td><td>特殊场景，保留旧逻辑</td></tr>
+            <tr><td>N100000000000001</td><td>440100</td><td><span class="tag fail">失败</span></td><td>营业证明文件号码:同一收单机构同一身份证注册小微商户不能超过2个</td><td>440113</td><td>113.320287</td><td>23.034263</td><td class="new">不调整</td><td>2026-08-24 14:08:18</td><td>2026-08-24 14:13:18</td><td>厦门地区迁移广州</td></tr>
+            <tr><td>N100000000000008</td><td>440100</td><td><span class="tag fail">失败</span></td><td>该商户正在操作中，请稍后重试 <span class="badge k">现有</span></td><td>440115</td><td>113.531792</td><td>22.789019</td><td class="new">不调整</td><td>2026-08-24 13:53:58</td><td>2026-08-24 13:58:59</td><td>厦门地区迁移广州</td></tr>
+            
+          </tbody>
+        </table>
+        </div>
+        <div class="pager">显示第 1 到第 6 条记录，总共 526,440 条记录　每页显示 20 ▾　‹ 1 2 3 4 5 … 26322 ›　跳转至 ▭ GO</div>
+        <div class="note">
+          本页<b>只新增 1 列</b>（法定名称处理方式），其余字段、筛选项与执行逻辑一律不动。<br>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== 屏 4：地区变更弹窗（现有页改动） ==================== -->
+<div class="screen" id="s4">
+<div class="app">
+  <div class="topbar">
+    <div class="logo"><span class="mark">◁</span> 嘉联支付 · 业务运营 ▾</div>
+    <nav><span>应收系统</span><span class="on">立刷中心</span><span>增值服务</span><span>进销存系统</span><span>客诉平台</span></nav>
+    <div class="user">欢迎登录！彭才林</div>
+  </div>
+  <div class="body">
+    <div class="side">
+      <div class="grp open">商户名单管理 <span>⌃</span></div>
+      <div class="item on">商户地区变更管理</div>
+      <div class="item">商户名称变更管理</div>
+    </div>
+    <div class="main">
+      <div class="tabs"><span class="t">首页</span><span class="t on">商户地区变更管理 ✕</span><span class="right">关闭操作 ∨</span></div>
+      <div class="card">
+        <div class="box-title">现有「新增商户变更地区」弹窗 —— <span class="new">本次只新增 1 个字段，执行链路与其余字段均不动</span></div>
+        <div class="drawer-demo">
+          <div class="drawer">
+            <h4>新增商户变更地区</h4>
+            <div class="fm">
+              <div class="row"><label><span class="req">*</span>子商户号</label><div class="ctl">
+                <div class="inp" style="width:100%">请输入子商户号</div>
+                <div class="hint">沿用：地区变更按<b>左端电签子商户号</b>操作，与名称变更（按银联商户号）不同，本次不改</div>
+              </div></div>
+
+              <div class="row"><label><span class="req">*</span>迁入地区码</label><div class="ctl">
+                <div class="inp" style="width:100%">请输入迁入地区码</div>
+                <div class="hint">沿用：6 位行政区划代码，系统按地址库匹配经纬度</div>
+              </div></div>
+
+              <div class="row"><label>经营名称命名规则</label><div class="ctl">
+                <span class="radio"><i class="on"></i>原名称前直接加迁入的市 <span class="badge k">沿用</span></span>
+                <span class="radio"><i></i>以法人姓名最后一字重新命名 <span class="badge k">沿用</span></span>
+                <span class="radio"><i></i>不调整 <span class="badge k">沿用</span></span>
+                <div class="hint">三个选项<b>全部保留、默认值不变</b>，本次不改动</div>
+              </div></div>
+
+              <div class="row"><label class="new"><span class="req">*</span>法定名称处理方式</label><div class="ctl">
+                <span class="radio new"><i class="on"></i>不调整（默认）</span>
+                <span class="radio new"><i></i>按迁入地重算</span>
+                <div class="hint new"><b>本次新增字段，必填，默认选中"不调整"。</b>现状是无条件把法定名称改成"迁入市+个体户+商户姓名"（例：西宁市个体户张三），与银联"名称不带地区"新规冲突；选"按迁入地重算"时维持现有旧逻辑不变</div>
+              </div></div>
+
+              <div class="row"><label>备注</label><div class="ctl">
+                <textarea class="ta"></textarea>
+                <div class="hint">沿用</div>
+              </div></div>
+            </div>
+            <div class="foot"><span class="btn">取消</span> <span class="btn primary">确认</span></div>
+          </div>
+
+          <div style="flex:1; min-width:320px">
+            <div class="note warn">
+              <b>本次对地区变更功能的 2 处连带改动：</b><br>
+              1、弹窗新增「法定名称处理方式」单选，必填，默认选中"不调整"（上图红框）。<br>
+              2、批量导入模板同步加一列「法定名称处理方式」，<b>必填、不允许留空</b>，留空的行按解析失败处理；模板其余列不变。历史已导入未执行的批次没有这一列，一律按"不调整"执行（见第 ⑤ 屏模板二）。<br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== 屏 5：批量业务操作（现有页改动） ==================== -->
+<div class="screen" id="s5">
+<div class="app">
+  <div class="topbar">
+    <div class="logo"><span class="mark">◁</span> 嘉联支付 · 基础运营 ▾</div>
+    <nav><span class="on">服务中心</span><span>安全中心</span><span>消息中心</span><span>配置中心</span></nav>
+    <div class="user">欢迎登录！彭才林</div>
+  </div>
+  <div class="body">
+    <div class="side">
+      <div class="grp">基础设置 <span>⌄</span></div>
+      <div class="grp open">任务管理 <span>⌃</span></div>
+      <div class="item">创建工单</div>
+      <div class="item on">批量业务操作</div>
+      <div class="item">我的待办</div>
+      <div class="item">我的已办</div>
+      <div class="item">我的发起</div>
+      <div class="item">工作流待办</div>
+      <div class="grp">流程查询 <span>⌄</span></div>
+    </div>
+    <div class="main">
+      <div class="tabs"><span class="t">首页</span><span class="t on">批量业务操作 ✕</span><span class="right">关闭操作 ∨</span></div>
+      <div class="card">
+        <div class="box-title">路径：综合门户 → 基础运营 → 服务中心 → 任务管理 → 批量业务操作 → 导入</div>
+        <div style="max-width:780px; margin:0 auto">
+          <div class="row"><label><span class="req">*</span>类型</label><div class="ctl"><div class="inp sel" style="width:100%">业务类</div></div></div>
+          <div class="row"><label><span class="req">*</span>业务模块</label><div class="ctl"><div class="inp sel" style="width:100%">立刷模块</div></div></div>
+          <div class="row"><label class="new"><span class="req">*</span>业务名称</label><div class="ctl"><div class="inp sel new" style="width:100%">批量变更商户名称</div>
+            <div class="hint new"><b>新增一个业务名称</b>；原「批量导入变更地区商户名单」保留不动，仅其模板新增一列"法定名称处理方式"</div>
+          </div></div>
+          <div class="row"><label><span class="req">*</span>上传附件</label><div class="ctl"><span class="btn">⬆ 文件上传</span>
+            <div class="hint">按下方模板填写后上传；解析失败的行在导入结果中返回，不生成变更记录</div>
+          </div></div>
+          <div class="row"><label>单条入口</label><div class="ctl"><div class="inp new" style="width:100%; background:#f5f5f5">业务运营--立刷中心--商户名单管理 商户名称变更管理</div>
+            <div class="hint new">随业务名称联动展示，指向新菜单</div>
+          </div></div>
+          <div class="row"><label>备注 / 操作说明</label><div class="ctl"><textarea class="ta"></textarea></div></div>
+          <div class="row"><label>忙时区间</label><div class="ctl" style="display:flex; gap:10px; flex-wrap:wrap">
+            <span class="inp" style="background:#f5f5f5">09:00 - 21:00</span>
+            <span class="inp" style="background:#f5f5f5">忙时限额 1000</span>
+            <span class="inp" style="background:#f5f5f5">闲时限额 9999</span>
+          </div>
+          <div class="hint">沿用公共功能的限流配置，本需求不改</div>
+          </div>
+          <div style="text-align:center; margin-top:10px"><span class="btn">关闭</span> <span class="btn primary">批量导入</span></div>
+          <div style="color:#f5222d; font-size:12px; margin-top:8px">下载批量操作模板</div>
+        </div>
+
+        <h3 class="sec new">模板一【新增】批量变更商户名称</h3>
+        <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th class="new">子商户号</th>
+            <th class="new">变更类型</th>
+            <th class="new">经营名称生成方式</th>
+            <th class="new">指定经营名称</th>
+            <th class="new">备注</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>N100000000000002</td><td>经营名称</td><td>去掉名称市级前缀</td><td></td><td>去市级前缀整改-第1批</td></tr>
+            <tr><td>N100000000000005</td><td>经营名称</td><td>指定名称</td><td>天天茶饮甜品店</td><td>敏感词整改-第1批</td></tr>
+            <tr><td>N100000000000006</td><td>法定名称</td><td></td><td></td><td>法定名称整改-第1批</td></tr>
+            <tr><td>N100000000000001</td><td>经营名称+法定名称</td><td>去掉名称市级前缀</td><td></td><td>两个名称一次改完-第1批</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3 class="sec chg">模板二【调整】批量导入变更地区商户名单 · 现有模板新增 1 列</h3>
+        <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>子商户号</th>
+            <th>迁入地区码</th>
+            <th>经营名称命名规则</th>
+            <th class="new">法定名称处理方式</th>
+            <th>备注</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>N00U00001A54970</td><td>440000</td><td>不调整</td><td class="new">不调整</td><td>迁移整改-不动名称</td></tr>
+            <tr><td>N00U00001A54971</td><td>610100</td><td>原名称前直接加迁入的市</td><td class="new">按迁入地重算</td><td>特殊场景，沿用旧命名</td></tr>
+            <tr><td>N00U00001A54972</td><td>510100</td><td>不调整</td><td class="new">不调整</td><td>必填，留空的行解析失败</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <div class="note warn">
+          <b>给研发的两个待确认点</b><br>
+          1、单次导入上限 9999 条、单日上限 10000 条沿用现有公共功能配置，本需求不改。<br>
+          2、<b>银联「修改报备」的速率上限待确认</b>（已知的 5-8 万/天是右端注销配额，不是同一条链路）。<br>
+          3、<b>每次导入只生成 1 条人工审核流程</b>（不按户拆），审核通过后名单内各户自动生成执行流程并自动通过。
+        </div>
+        </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== 屏 6：工作流记录列表（现有页改动） ==================== -->
+<div class="screen" id="s6">
+<div class="app">
+  <div class="topbar">
+    <div class="logo"><span class="mark">◁</span> 嘉联支付 · 基础运营 ▾</div>
+    <nav><span class="on">服务中心</span><span>安全中心</span><span>消息中心</span><span>配置中心</span></nav>
+    <div class="user">欢迎登录！彭才林</div>
+  </div>
+  <div class="body">
+    <div class="side">
+      <div class="grp">基础设置 <span>⌄</span></div>
+      <div class="grp">任务管理 <span>⌄</span></div>
+      <div class="grp open">流程查询 <span>⌃</span></div>
+      <div class="item on">工作流记录</div>
+      <div class="item">工单记录</div>
+    </div>
+    <div class="main">
+      <div class="tabs"><span class="t">首页</span><span class="t">批量业务操作</span><span class="t on">工作流记录 ✕</span><span class="right">关闭操作 ∨</span></div>
+      <div class="card">
+        <div class="box-title">路径：综合门户 → 基础运营 → 服务中心 → 流程查询 → 工作流记录</div>
+        <div class="filters">
+          <span class="inp">2026-09-01 00:00:00</span><span class="inp">2026-09-30 23:59:59</span><span class="inp">流程编号</span>
+          <span class="inp sel">流程名称</span><span class="inp sel">来源</span><span class="inp sel">实体类型</span>
+          <span class="btn primary">查询</span><span class="btn">重置</span><span class="btn" style="background:#fa8c16;border-color:#fa8c16;color:#fff">高级筛选</span>
+        </div>
+        <div class="tbl-wrap" style="margin-top:12px">
+        <table>
+          <thead><tr>
+            <th>流程编号</th><th>企微流程编号</th>
+            <th>流程名称</th>
+            <th>流程平台</th><th>来源</th><th>实体类型</th>
+            <th>实体名称</th>
+            <th>子实体名称</th>
+            <th>审核状态</th><th>流程发起人</th><th>流程创建时间</th>
+            <th>备注</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td style="color:#1890ff">2026091099999001</td><td>-</td><td class="new">商户名称变更审核流程</td><td>内部流程</td><td>商户模块</td><td>商户</td><td class="new">BAT20260910001（批量任务号）</td><td class="new">批量变更商户名称</td><td><span class="tag ok">审核通过</span></td><td>彭才林</td><td>2026-09-10 17:04:07</td><td class="new">去市级前缀整改-第1批</td>
+            </tr>
+            <tr>
+              <td style="color:#1890ff">2026091099999002</td><td>-</td><td class="new">商户名称变更执行流程</td><td>内部流程</td><td>商户模块</td><td>商户</td><td class="new">N100000000000002</td><td class="new">经营名称变更</td><td><span class="tag ok">自动通过</span></td><td>彭才林</td><td>2026-09-10 17:12:30</td><td class="new">去市级前缀整改-第1批</td>
+            </tr>
+            <tr>
+              <td style="color:#1890ff">2026091099999003</td><td>-</td><td class="new">商户名称变更执行流程</td><td>内部流程</td><td>商户模块</td><td>商户</td><td class="new">N100000000000003</td><td class="new">经营名称+法定名称变更</td><td><span class="tag ok">自动通过</span></td><td>彭才林</td><td>2026-09-10 17:12:30</td><td class="new">去市级前缀整改-第1批</td>
+            </tr>
+            <tr>
+              <td style="color:#1890ff">2026010199999001</td><td>-</td><td>商户地区变更审核流程 <span class="badge k">沿用</span></td><td>内部流程</td><td>商户模块</td><td>商户</td><td>N00W0000532B497</td><td>商户地址变更报备</td><td><span class="tag ok">审核通过</span></td><td>唐玉双</td><td>2026-01-05 17:04:07</td><td>-</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="note">
+          <b>新增两条流程</b>：① <b>商户名称变更审核流程</b>——需人工审核，单条新增 1 条、每次批量导入 1 条（实体名称取批量任务号，字段待技术确定）；② <b>商户名称变更执行流程</b>——审核通过后名单内每户各 1 条，<b>系统自动通过</b>，只作执行留痕，不进人工待办。<br>
+          两条流程公共取值：流程平台＝内部流程；来源＝商户模块；实体类型＝商户；流程发起人＝导入人或新增人。审批部门待确定（地区变更流程为风险管理部审核）。<br>
+          上表第 1 行是一次批量导入产生的审核流程，第 2、3 行是它审核通过后自动生成、自动通过的执行流程（备注同批次，可据此串联）。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== 屏 7：审核详情（现有页改动） ==================== -->
+<div class="screen" id="s7">
+<div class="app">
+  <div class="topbar">
+    <div class="logo"><span class="mark">◁</span> 嘉联支付 · 基础运营 ▾</div>
+    <nav><span class="on">服务中心</span><span>安全中心</span><span>消息中心</span><span>配置中心</span></nav>
+    <div class="user">欢迎登录！彭才林</div>
+  </div>
+  <div class="body">
+    <div class="side">
+      <div class="grp open">流程查询 <span>⌃</span></div>
+      <div class="item on">工作流记录</div>
+      <div class="item">工单记录</div>
+    </div>
+    <div class="main">
+      <div class="tabs"><span class="t">首页</span><span class="t">工作流记录</span><span class="t">工作流流程详情</span><span class="t on">审核详情 ✕</span><span class="right">关闭操作 ∨</span></div>
+
+      <div class="box-title" style="margin-top:12px">路径：综合门户 → 基础运营 → 服务中心 → 流程查询 → 工作流记录 → 流程详情 → 审核详情</div>
+      <div class="wf-block">
+        <div class="hd">工单信息（本例为单条新增的审核流程，对应 1 个左端子商户号）</div>
+        <table class="kv">
+          <tr><th>流程编号</th><td>2026091099999001</td><th>流程名称</th><td class="new">商户名称变更审核流程</td><th>任务名称</th><td>风险管理部审核（待确认）</td></tr>
+          <tr><th>流程创建时间</th><td>2026-09-10 17:04:07</td><th>流程发起人</th><td>彭才林</td><th>实体类型</th><td>商户</td></tr>
+          <tr><th>实体名称</th><td style="color:#1890ff">N100000000000002</td><th>子实体名称</th><td class="new">经营名称变更</td><th>审核次数</th><td>1</td></tr>
+        </table>
+      </div>
+
+      <div class="wf-block">
+        <div class="hd new">商户名称变更信息（对应原「商户地址变更信息」区块，字段全部新增）</div>
+        <table class="kv">
+          <tr>
+            <th class="new">变更类型</th><td class="new">经营名称</td>
+            <th class="new">经营名称生成方式</th><td class="new">去掉名称市级前缀</td>
+          </tr>
+          <tr>
+            <th class="new">变更前名称</th><td class="new">深圳市美美丽丽便利店</td>
+            <th class="new">变更后名称</th><td class="new">美美丽丽便利店</td>
+          </tr>
+          <tr>
+            <th class="new">子商户号</th><td class="new">N100000000000002</td>
+            <th class="new">对应银联商户号</th><td class="new">M100000000000002</td>
+          </tr>
+          <tr><th class="new">备注</th><td class="new" colspan="3">去市级前缀整改-第1批</td></tr>
+        </table>
+        <div style="text-align:center; padding:14px; color:#999">
+          <span class="radio" style="display:inline-block; margin-right:20px"><i class="on"></i>审核通过</span>
+          <span class="radio" style="display:inline-block"><i></i>审核不通过</span>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:14px"><span class="btn">关闭</span></div>
+
+      <div class="note">
+        <b>人工审核只发生一次</b>：单条新增审核详情展示单户明细（上图）；<b>批量导入的审核详情展示批次汇总</b>（批量任务号、导入总条数、按变更类型分组的条数、备注），审核人对整批做一次通过/不通过。<br>
+        审核不通过时，本次名单内全部记录置失败（失败原因记审核不通过），不生成执行流程。执行流程自动通过，审核详情页只作留痕查看。
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+  document.querySelectorAll('.nav-groups button').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('.nav-groups button').forEach(function(x){x.classList.remove('active')});
+      b.classList.add('active');
+      document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on')});
+      document.getElementById(b.dataset.s).classList.add('on');
+      window.scrollTo(0,0);
+    });
+  });
+</script>
+</body>
+</html>
